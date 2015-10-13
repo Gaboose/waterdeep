@@ -1,27 +1,8 @@
 from copy import deepcopy
-from collections import namedtuple, Sequence
 
 from resources import Resources, QualityResources
 from actions import BuildingQuery, QuestQuery, IntrigueQuery
-
-
-def to_dict(sequence, name='Things'):
-    """
-    :return: namedtuple mapping class names to sums of given elements
-    e.g. to_dict((8, 'hello ', 10, 'sun')) == Things(int=18, str='hello sun')
-    """
-
-    if not isinstance(sequence, Sequence):
-        sequence= (sequence,)
-    dct = dict()
-    for element in sequence:
-        name = element.__class__.__name__
-        if name in dct:
-            dct[name] += element
-        else:
-            dct[name] = element
-    keys, vals = zip(*dct.items())
-    return namedtuple(name, keys)(*vals)
+from actions import Supply, Release, TakeFaceUp, DrawFaceDown
 
 
 class Named:
@@ -29,38 +10,41 @@ class Named:
         self.name = name
         return self
 
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __repr__(self):
+        return '({}="{}")'.format(self.__class__.__name__, self.name)
+
 
 class Quest(Named):
 
-    def __init__(self, required, reward):
-        self.required = required
-        self.reward = to_dict(reward)
+    def __init__(self, *actions):
+        self.actions = actions
 
     def action(self, actor, state):
-        state = deepcopy(state)
-
-        yield from state.players[actor].sub(self.required)
-        yield from state.players[actor].add((self.reward.Resources,
-                                             self.reward.QualityResources.only_facedown()))
-        yield from state.board.draw_faceup(self.reward.QualityResources.only_faceup(), state.players[actor])
+        for action in self.actions:
+            state = yield from action.action(actor, state)
         return state
 
 
 class NoopIntrigue(Named):
-    def action(owner, state):
+    def action(actor, state):
         return state
+        yield
 
 
 class CoreBuilding(Named):
 
-    def __init__(self, reward):
-        self.reward = reward
+    def __init__(self, *actions):
+        self.actions = actions
 
     def action(self, actor, state):
-        state = deepcopy(state)
-        yield from state.players[actor].add((self.reward.Resources,
-                                             self.reward.QualityResources.only_facedown()))
-        yield from state.board.draw_faceup(self.reward.QualityResources.only_faceup(), state.players[actor])
+        for action in self.actions:
+            state = yield from action.action(actor, state)
         return state
 
 
@@ -74,9 +58,9 @@ class CliffwatchInnReset(Named):
         state.board.quests = []
         for i in range(4):
             quest = yield QuestQuery()
-            state.boards.quest.append(quest)
+            state.board.quests.append(quest)
 
-        yield from state.players[actor].add(QualityResources(quests=1))
+        state = yield from TakeFaceUp(QualityResources(quests=1)).action(actor, state)
         return state
 
 
@@ -103,7 +87,7 @@ class CastleWaterdeep(Named):
     def action(self, actor, state):
         state = deepcopy(state)
         state.board.tower_owner = actor
-        yield from state.players[actor].add(QualityResources(intrigues=1))
+        state = yield from DrawFaceDown(QualityResources(intrigues=1)).action(actor, state)
         return state
 
 
@@ -121,27 +105,26 @@ class WaterdeepHarbor(Named):
 
 class Building(Named):
 
-    def __init__(self, cost, action_required, action_reward, owner_reward):
+    def __init__(self, cost, actions, owner_actions):
         self.cost = cost
-        self.action_required = action_required or Resources()
-        self.action_reward = to_dict(action_reward)
-        self.owner_reward = owner_reward
+        self.actions = actions
+        self.owner_actions = owner_actions
+
         self.owner = None
 
     def action(self, actor, state):
-        state = deepcopy(state)
+        for action in self.actions:
+            state = yield from action.action(actor, state)
+        for action in self.owner_actions:
+            state = yield from action.action(self.owner, state)
 
-        state.players[actor].resources += self.action_reward['Resources'] - self.action_required
-        yield from state.board.draw_faceup(self.action_reward['QualityResources'].only_faceup(), state.players[actor])
-        yield from state.players[actor].add_intrigues(self.action_reward['QualityResources'].intrigues)
-        yield from state.players[self.owner].add(self.owner_reward)
         return state
 
 
 class Library:
 
     quests = [
-        Quest(Resources(fighters=3), Resources(vp=6)).name('sample quest')
+        Quest(Supply(Resources(fighters=3)), Supply(Resources(vp=6))).name('sample quest')
     ]
 
     intrigues = [
@@ -149,19 +132,21 @@ class Library:
     ]
 
     core_buildings = [
-        CoreBuilding(Resources(gold=4)).name("Aurora's Realms Shop"),
-        CoreBuilding(Resources(wizards=1)).name("Blackstaff Tower"),
-        CoreBuilding((QualityResources(quests=1), Resources(gold=2))).name("Cliffwatch Inn (Gold)"),
-        CoreBuilding(QualityResources(quests=1, intrigues=1)).name("Cliffwatch Inn (Intrigue)"),
+        CoreBuilding(Supply(Resources(gold=4))).name("Aurora's Realms Shop"),
+        CoreBuilding(Supply(Resources(wizards=1))).name("Blackstaff Tower"),
+        CoreBuilding(TakeFaceUp(QualityResources(quests=1)),
+                     Supply(Resources(gold=2))).name("Cliffwatch Inn (Gold)"),
+        CoreBuilding(TakeFaceUp(QualityResources(quests=1)),
+                     DrawFaceDown(QualityResources(intrigues=1))).name("Cliffwatch Inn (Intrigue)"),
         CliffwatchInnReset(),
         BuildersHall(),
         CastleWaterdeep(),
         WaterdeepHarbor(1),
         WaterdeepHarbor(2),
         WaterdeepHarbor(3),
-        CoreBuilding(Resources(fighters=2)).name("Field of Triumph"),
-        CoreBuilding(Resources(rogues=2)).name("The Grinning Lion Tavern"),
-        CoreBuilding(Resources(clerics=1)).name("The Plinth")
+        CoreBuilding(Supply(Resources(fighters=2))).name("Field of Triumph"),
+        CoreBuilding(Supply(Resources(rogues=2))).name("The Grinning Lion Tavern"),
+        CoreBuilding(Supply(Resources(clerics=1))).name("The Plinth")
     ]
 
     @classmethod

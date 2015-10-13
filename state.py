@@ -14,22 +14,6 @@ class Board:
         self.quests = quests
         self.tower_owner = tower_owner
 
-    def draw_faceup(self, resources, player):
-        for i in range(resources.quests):
-            quest = yield QuestQuery()
-            self.quests.remove(quest)
-            player.quests.append(quest)
-            newquest = yield QuestQuery()
-            self.quests.append(newquest)
-
-
-        for i in range(resources.buildings):
-            building = yield BuildingQuery()
-            self.buildings_for_sale.remove(building)
-            self.buildings_open.append(building)
-            newbuilding = yield BuildingQuery()
-            self.buildings_for_sale.append(newbuilding)
-
 
 class State:
 
@@ -83,10 +67,9 @@ class OpenPlayer(Player):
     def remove_intrigue(self, intrigue):
         self.intrigues.remove(intrigue)
 
-    def _add_intrigues(self, num):
-        for i in range(num):
-            intrigue = yield IntrigueQuery()
-            self.intrigues.append(intrigue)
+    def draw_intrigue(self):
+        intrigue = yield IntrigueQuery()
+        self.intrigues.append(intrigue)
 
     def __repr__(self):
         names = ['agentsN', 'quests', 'resources', 'intrigues', 'lord']
@@ -103,8 +86,8 @@ class Opponent(Player):
     def remove_intrigue(self, intrigue):
         self.intriguesN -= 1
 
-    def _add_intrigues(self, num):
-        self.intriguesN += num
+    def draw_intrigue(self):
+        self.intriguesN += 1
         return
         yield
 
