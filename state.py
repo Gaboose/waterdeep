@@ -2,7 +2,7 @@ from collections import Sequence
 
 from library import Library
 from resources import QualityResources
-from queries import QuestQuery, IntrigueQuery
+from actions import QuestQuery, IntrigueQuery
 
 
 class State:
@@ -71,6 +71,7 @@ class Opponent(Player):
 
     def _add_intrigues(self, num):
         self.intriguesN += num
+        return
         yield
 
     def __repr__(self):

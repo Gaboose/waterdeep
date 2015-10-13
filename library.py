@@ -66,7 +66,11 @@ class Library:
     ]
 
     core_buildings = [
-        CoreBuilding(Resources(fighters=2)).name('fighters')
+        CoreBuilding(Resources(gold=4)).name("Aurora's Realms Shop"),
+        CoreBuilding(Resources(wizards=1)).name("Blackstaff Tower"),
+        CoreBuilding(Resources(fighters=2)).name("Field of Triumph"),
+        CoreBuilding(Resources(rogues=2)).name("The Grinning Lion Tavern"),
+        CoreBuilding(Resources(clerics=1)).name("The Plinth")
     ]
 
     @classmethod

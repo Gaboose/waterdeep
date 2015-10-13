@@ -1,6 +1,6 @@
 class Resources:
 
-    names = ['fighters', 'rogues', 'wizards', 'clerics', 'vp']
+    names = ['fighters', 'rogues', 'wizards', 'clerics', 'gold', 'vp']
 
     def __init__(self, **kwargs):
         for name in self.names:
