@@ -1,12 +1,6 @@
 
 class Query:
-
-    def __init__(self, callback):
-        self.callback = callback
-
-    def answer(self, element):
-        self.callback(element)
-
+    pass
 
 class IntrigueQuery(Query):
     pass
@@ -21,14 +15,27 @@ class BuildingQuery(Query):
 
 
 def feed(generator, **kwargs):
-    for query in generator:
-        answers = kwargs.get(query.__class__.__name__, [])
-        if len(answers) > 0:
-            query.answer(answers.pop(0))
-        else:
-            return query
+
+    state = None
+
+    try:
+        query = generator.send(None)
+        while True:
+            answers = kwargs.get(query.__class__.__name__, [])
+            if len(answers) > 0:
+                query = generator.send(answers.pop(0))
+            else:
+                raise Exception('Not enough {} answers'.format(query.__class__.__name__))
+    except StopIteration as exception:
+        state = exception.value
+
+    if state is None:
+        raise Exception('Action did not return a state')
+    return state
 
 
 def run(generator):
-    for query in generator:
-        return query
+    try:
+        next(generator)
+    except StopIteration as exception:
+        return exception.value

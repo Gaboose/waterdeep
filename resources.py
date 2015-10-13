@@ -25,4 +25,10 @@ class Resources:
 
 
 class QualityResources(Resources):
-    names = ['quests', 'intrigues']
+    names = ['quests', 'buildings', 'intrigues']
+
+    def only_faceup(self):
+        return QualityResources(quests=self.quests, buildings=self.buildings)
+
+    def only_facedown(self):
+        return QualityResources(intrigues=self.intrigues)

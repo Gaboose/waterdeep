@@ -15,7 +15,7 @@ class MyTestCase(unittest.TestCase):
 
 
     def test_quest(self):
-        s = State({'red': Player(4, [], Resources())}, Board([], []))
+        s = State({'red': Player()})
         q = Quest(Resources(fighters=3), Resources(vp=6))
 
         s = actions.run(q.action('red', s))
@@ -25,9 +25,9 @@ class MyTestCase(unittest.TestCase):
 
 
     def test_building(self):
-        players = {'red': OpenPlayer(4, [], Resources()),
-                   'blue': Opponent(4, [], Resources())}
-        s = State(players, Board([], []))
+        players = {'red': OpenPlayer(4),
+                   'blue': Opponent(4)}
+        s = State(players)
         b = Building(5, None,
                      Resources(wizards=3),
                      (Resources(clerics=2), QualityResources(intrigues=1)))
@@ -41,7 +41,7 @@ class MyTestCase(unittest.TestCase):
 
 
     def test_quest_query(self):
-        s = State({'red': OpenPlayer(4, [], Resources())}, Board([], []))
+        s = State({'red': OpenPlayer()})
         q = Quest(Resources(fighters=3), QualityResources(quests=1))
 
         s = actions.feed(q.action('red', s), QuestQuery=[Quest(None, None).name("Reward Quest")])
@@ -52,7 +52,7 @@ class MyTestCase(unittest.TestCase):
 
 
     def test_query_feed(self):
-        s = State({'red': OpenPlayer(4, [], Resources())}, Board([], []))
+        s = State({'red': OpenPlayer(4)})
         q = Quest(Resources(), QualityResources(quests=2, intrigues=1))
 
         s = actions.feed(q.action('red', s), QuestQuery=[Quest(None, None).name("Reward Quest"),
